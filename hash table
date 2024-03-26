@@ -1,0 +1,132 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+// Define structure for a node in the doubly linked list
+typedef struct Node {
+    int key;
+    int value;
+    struct Node* next;
+    struct Node* prev;
+} Node;
+
+// Define structure for the doubly linked list
+typedef struct {
+    Node* head;
+    Node* tail;
+} DoublyLinkedList;
+
+// Initialize a new doubly linked list
+DoublyLinkedList* createLinkedList() {
+    DoublyLinkedList* list = (DoublyLinkedList*)malloc(sizeof(DoublyLinkedList));
+    list->head = NULL;
+    list->tail = NULL;
+    return list;
+}
+
+// Insert a new node at the end of the list
+void insertNode(DoublyLinkedList* list, int key, int value) {
+    Node* newNode = (Node*)malloc(sizeof(Node));
+    newNode->key = key;
+    newNode->value = value;
+    newNode->next = NULL;
+    if (list->head == NULL) {
+        list->head = newNode;
+        list->tail = newNode;
+        newNode->prev = NULL;
+    } else {
+        list->tail->next = newNode;
+        newNode->prev = list->tail;
+        list->tail = newNode;
+    }
+}
+
+// Structure for the hash table
+typedef struct {
+    int size;
+    int capacity;
+    DoublyLinkedList** table;
+} HashTable;
+
+// Hash function using multiplication method
+int hashMul(int key, int capacity) {
+    double A = 0.6180339887; // A constant value (the golden ratio)
+    return (int)(capacity * ((key * A) - (int)(key * A)));
+}
+
+// Hash function using division method
+int hashDiv(int key, int capacity) {
+    return key % capacity;
+}
+
+// Initialize a new hash table
+HashTable* createHashTable(int capacity) {
+    HashTable* hashTable = (HashTable*)malloc(sizeof(HashTable));
+    hashTable->size = 0;
+    hashTable->capacity = capacity;
+    hashTable->table = (DoublyLinkedList**)malloc(capacity * sizeof(DoublyLinkedList*));
+    for (int i = 0; i < capacity; i++) {
+        hashTable->table[i] = createLinkedList();
+    }
+    return hashTable;
+}
+
+// Insert a key-value pair into the hash table
+void insert(HashTable* hashTable, int key, int value) {
+    int index = hashMul(key, hashTable->capacity); // You can change the hash function here
+    insertNode(hashTable->table[index], key, value);
+    hashTable->size++;
+
+    // Check if resizing is needed
+    if (hashTable->size >= hashTable->capacity / 2) {
+        int newCapacity = hashTable->capacity * 2;
+        DoublyLinkedList** newTable = (DoublyLinkedList**)malloc(newCapacity * sizeof(DoublyLinkedList*));
+        for (int i = 0; i < newCapacity; i++) {
+            newTable[i] = createLinkedList();
+        }
+        for (int i = 0; i < hashTable->capacity; i++) {
+            Node* current = hashTable->table[i]->head;
+            while (current != NULL) {
+                int newIndex = hashMul(current->key, newCapacity);
+                insertNode(newTable[newIndex], current->key, current->value);
+                current = current->next;
+            }
+        }
+        hashTable->capacity = newCapacity;
+        free(hashTable->table);
+        hashTable->table = newTable;
+    }
+}
+
+// Print the contents of the hash table
+void printHashTable(HashTable* hashTable) {
+    printf("Hash Table Contents:\n");
+    for (int i = 0; i < hashTable->capacity; i++) {
+        printf("[%d]: ", i);
+        Node* current = hashTable->table[i]->head;
+        while (current != NULL) {
+            printf("(%d, %d) ", current->key, current->value);
+            current = current->next;
+        }
+        printf("\n");
+    }
+}
+
+int main() {
+    HashTable* hashTable = createHashTable(10);
+
+    // Insert some key-value pairs
+    insert(hashTable, 1, 10);
+    insert(hashTable, 11, 20);
+    insert(hashTable, 21, 30);
+    insert(hashTable, 31, 40);
+
+    // Print the hash table contents
+    printHashTable(hashTable);
+
+    // Clean up memory
+    // (Note: you should implement a proper cleanup function to avoid memory leaks in a real application)
+    free(hashTable->table);
+    free(hashTable);
+
+    return 0;
+}
